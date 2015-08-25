@@ -39,12 +39,12 @@ class UserPhoto(ndb.Model):
 class PhotoUploadFormHandler(webapp2.RequestHandler):
     def get(self):
         upload_url = blobstore.create_upload_url('/upload_photo')
-        myDict = {"blob_url" : upload_url }
-        self.response.write(json.dumps(myDict))
-        # self.response.write('<html><body>')
-        # self.response.write('<form action="%s" method="POST" enctype="multipart/form-data">' % upload_url)
-        # self.response.write('''Upload File: <input type="file" name="file"><br> <input type="submit"
-        #     name="submit" value="Submit"> </form></body></html>''')
+        # myDict = {"blob_url" : upload_url }
+        # self.response.write(json.dumps(myDict))
+        self.response.write('<html><body>')
+        self.response.write('<form action="%s" method="POST" enctype="multipart/form-data">' % upload_url)
+        self.response.write('''Upload File: <input type="file" name="file"><br> <input type="submit"
+            name="submit" value="Submit"> </form></body></html>''')
       
 
 class PhotoUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
@@ -56,9 +56,9 @@ class PhotoUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
             #                        blob_key=upload.key())
             # user_photo.put()
 
-            # self.redirect('/view_photo/%s' % upload.key())
-            mynewDict = {"blob_view_url" : '/view_photo/%s' % upload.key()}
-            self.response.write(json.dumps(mynewDict))
+            self.redirect('/view_photo/%s' % upload.key())
+            # mynewDict = {"blob_view_url" : '/view_photo/%s' % upload.key()}
+            # self.response.write(json.dumps(mynewDict))
         except:
             self.response.write('Failure')
         
