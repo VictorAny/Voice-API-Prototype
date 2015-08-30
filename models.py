@@ -1,18 +1,20 @@
+from google.appengine.ext import ndb
+
 
 class User(ndb.Model):
 	name = ndb.StringProperty()
 	email = ndb.StringProperty()
-	user_id = ndb.IntegerProperty()
+	user_id = ndb.StringProperty()
 	picture_url = ndb.StringProperty()
-	# string of friend_ids
 
 class Voice(ndb.Model):
 	#parent will be User
 	title = ndb.StringProperty()
-	url = ndb.StringProperty()
-	dateCreated = ndb.DateTimeProperty()
+	url = ndb.BlobKeyProperty()
+	# dateCreated = ndb.DateTimeProperty()
+	dateCreated = ndb.StringProperty()
 	reach = ndb.IntegerProperty()
-	v_id = ndb.StringProperty()
+	v_id = ndb.IntegerProperty()
 	tag = ndb.StringProperty()
 	#might make this integer, and treat it like an enum.
 	privacy = ndb.StringProperty()

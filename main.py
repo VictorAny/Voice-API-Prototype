@@ -3,14 +3,28 @@ import webapp2
 import os
 import cloudstorage as gcs
 import json
+import time
 from google.appengine.api import users
 from google.appengine.ext import blobstore
 from google.appengine.ext import ndb
 from google.appengine.ext.webapp import blobstore_handlers
 from google.appengine.ext.webapp.util import run_wsgi_app
-from models.py import User
+from models import User
+from models import Voice
 
 from google.appengine.api import app_identity
+
+#-----------------------------------------------------------
+#Helpers
+
+class MainHelperClass(webapp2.RequestHandler):
+    def writeJson(self, dictionary):
+        self.response.out.write(json.dumps(dictionary))
+
+    def writeResponse(self, response):
+        responseDictionary = {"response" : response}
+        self.response.out.write(json.dumps(responseDictionary))
+
 
 def create_file(self, filename, bucketName):
 	#write_retry_params = gcs.RetryParams(backoff_factor=1.1)
@@ -22,62 +36,107 @@ def create_file(self, filename, bucketName):
 	gcs_file.close()
 	#self.tmp_filenames_to_clean_up.append(filename)
 
-def createUserWithUserInformation():
-    u_name = self.request.get('name')
-    u_email = self.request.get('email')
-    u_id = self.request.get('id')
-    u_profile_url = self.request.get('picture')
-    user = User(name=u_name, email=u_email, user_id=u_id, picture_url=u_profile_url)
+def createUserWithUserInformation(jsonRequest):
+    u_name = jsonRequest['name']
+    u_email = jsonRequest['email']
+    u_id = jsonRequest['id']
+    u_profile_url = jsonRequest['picture']
+    user = User()
+    user.name = u_name
+    user.user_id = u_id
+    user.email = u_email
+    user.picture_url = jsonRequest['picture']
+    userKey = ndb.Key(User, u_id)
+    user.key = userKey
+    user.put()
+    return userKey
+
+#HANDLERS
+#-----------------------------------------------------------
 
 
-
-class PhotoUploadFormHandler(webapp2.RequestHandler):
+class VoiceUploadFormHandler(MainHelperClass):
     def get(self):
         upload_url = blobstore.create_upload_url('/upload_voice')
         myDict = {"blob_url" : upload_url }
-        self.response.write(json.dumps(myDict))
+        self.response.out.write(json.dumps(myDict))
       
 
-class PhotoUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
+class VoiceUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     def post(self):
+        print self.request
+        metaData = self.request.get('victor')
+        mydict = dict((k.strip(), v.strip()) for k,v in (item.split('=') for item in metaData.split('&')))
         try:
             upload = self.get_uploads()[0]
             print upload.key()
-            # mynewDict = {"blob_view_url" : '/view_photo/%s' % upload.key()}
-            # self.response.write(json.dumps(mynewDict))
-             self.redirect('/view_photo/%s' % upload.key())
+            voice_url = upload.key()
+            user_id = mydict['user_id']
+            # create unique key for voice_id
+            user_key = ndb.Key(User, user_id)
+            voice_id = Voice.allocate_ids(size=1, parent=user_key)[0]
+            voice_key = ndb.Key(Voice, voice_id, parent=user_key)
+            userVoice = Voice()
+            userVoice.title = mydict['title']
+            userVoice.url = voice_url
+            userVoice.v_id = voice_id
+            userVoice.privacy = mydict['privacy']
+            userVoice.tag = mydict['tag']
+            userVoice.put()
+
+            mynewDict = {"blob_view_url" : '/view_voice/%s' % upload.key()}
+            self.response.out.write(json.dumps(mynewDict))
+            # self.redirect('/view_photo/%s' % upload.key())
         except:
-            self.response.write('Failure')
+            self.response.out.write({"respone" : "Failure"})
         
 
-class ViewPhotoHandler(blobstore_handlers.BlobstoreDownloadHandler):
+class ViewVoiceHandler(blobstore_handlers.BlobstoreDownloadHandler):
     def get(self, photo_key):
         if not blobstore.get(photo_key):
             self.error(404)
         else:
             self.send_blob(photo_key)
 
-class LoginUserHandler(webapp2.RequestHandler):
+class LoginUserHandler(MainHelperClass):
     def post(self):
-        # createUserWithUserInformation()
-        try:
-            u_name = self.request.get('name')
-            u_email = self.request.get('email')
-            u_id = self.request.get('id')
-            u_profile_url = self.request.get('picture')
-            user = User(name=u_name, email=u_email, user_id=u_id, picture_url=u_profile_url)
-            user.put()
-            responseDict = {"response": "Success"}
-            self.response.write(json.dumps(responseDict))
-        except:
-            errorDict = {"response" : "Error setting up user"}
-            self.response.write(json.dumps(errorDict))
+        requestBody = self.request.body
+        jsonRequest = json.loads(requestBody)
+        user_id = jsonRequest['id']
+        userKey = ndb.Key(User, user_id)
+        userProfile = userKey.get()
+        if userProfile:
+            self.writeResponse("Sucess, user already has an account")
+        else:
+            try:
+                user_key = createUserWithUserInformation(jsonRequest)
+                print user_key.get()
+                self.writeResponse("Sucess, user account created")
+            except:
+                self.writeResponse("Error setting up user")
 
+
+class GetUserInformation(MainHelperClass):
+    def get(self, user_id):
+        userKey = ndb.Key(User, user_id)
+        userProfile = userKey.get()
+        if userProfile:
+            user_info = { "response" : "Sucess",
+            "userdata" :  {   "name" : userProfile.name,
+                                "email" : userProfile.email,
+                                "user_id" : userProfile.user_id,
+                                "picture_url" : userProfile.picture_url
+                }
+            }
+            self.writeJson(userinfo)
+        else:
+            self.writeResponse("Error, user not found")
 
 
 app = webapp2.WSGIApplication([
-    ('/upload_form', PhotoUploadFormHandler),
-    ('/upload_voice', PhotoUploadHandler),
-    ('/view_voice/([^/]+)?', ViewPhotoHandler),
-    ('/newuser', LoginUserHandler)
+    ('/upload_form', VoiceUploadFormHandler),
+    ('/upload_voice', VoiceUploadHandler),
+    ('/view_voice/([^/]+)?', ViewVoiceHandler),
+    ('/newuser', LoginUserHandler),
+    ('/user/(\d{16})', GetUserInformation) # ADD REGEX EXPRESSION TO GET INFO.
 ], debug=True)
