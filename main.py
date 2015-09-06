@@ -40,14 +40,16 @@ def createUserWithUserInformation(jsonRequest):
     u_name = jsonRequest['name']
     u_email = jsonRequest['email']
     u_id = jsonRequest['id']
-    u_profile_url = jsonRequest['picture']
+    u_profile_url = jsonRequest['picture_url']
     user = User()
     user.name = u_name
     user.user_id = u_id
     user.email = u_email
-    user.picture_url = jsonRequest['picture']
+    user.picture_url = u_profile_url
     userKey = ndb.Key(User, u_id)
+    print userKey
     user.key = userKey
+    print u_name, user.key
     user.put()
     return userKey
 
@@ -82,6 +84,7 @@ class VoiceUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
             userVoice.v_id = voice_id
             userVoice.privacy = mydict['privacy']
             userVoice.tag = mydict['tag']
+            userVoice.key = voice_key
             userVoice.put()
 
             mynewDict = {"blob_view_url" : '/view_voice/%s' % upload.key()}
@@ -110,7 +113,6 @@ class LoginUserHandler(MainHelperClass):
         else:
             try:
                 user_key = createUserWithUserInformation(jsonRequest)
-                print user_key.get()
                 self.writeResponse("Sucess, user account created")
             except:
                 self.writeResponse("Error setting up user")
@@ -120,15 +122,21 @@ class GetUserInformation(MainHelperClass):
     def get(self, user_id):
         userKey = ndb.Key(User, user_id)
         userProfile = userKey.get()
+        user_voices = Voice.query(ancestor=userKey).fetch()
+        # for voice in user_voices:
+        #     print voice.url
         if userProfile:
             user_info = { "response" : "Sucess",
             "userdata" :  {   "name" : userProfile.name,
                                 "email" : userProfile.email,
                                 "user_id" : userProfile.user_id,
                                 "picture_url" : userProfile.picture_url
+                },
+            "voices" : {
+                   #implement voice recieving 
                 }
             }
-            self.writeJson(userinfo)
+            self.writeJson(user_info)
         else:
             self.writeResponse("Error, user not found")
 
