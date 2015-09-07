@@ -53,6 +53,15 @@ def createUserWithUserInformation(jsonRequest):
     user.put()
     return userKey
 
+
+def validateUser(user_id):
+    userKey = ndb.Key(User, user_id)
+    userProfile = userKey.get()
+    if userProfile:
+        return userKey
+    else:
+        return None
+
 #HANDLERS
 #-----------------------------------------------------------
 
@@ -118,13 +127,38 @@ class LoginUserHandler(MainHelperClass):
                 self.writeResponse("Error setting up user")
 
 
+
+# class Voice(ndb.Model):
+#     #parent will be User
+#     title = ndb.StringProperty()
+#     url = ndb.BlobKeyProperty()
+#     # dateCreated = ndb.DateTimeProperty()
+#     dateCreated = ndb.StringProperty()
+#     reach = ndb.IntegerProperty(default=0)
+#     v_id = ndb.IntegerProperty()
+#     tag = ndb.StringProperty()
+#     #might make this integer, and treat it like an enum.
+#     privacy = ndb.StringProperty()
+
 class GetUserInformation(MainHelperClass):
     def get(self, user_id):
         userKey = ndb.Key(User, user_id)
         userProfile = userKey.get()
-        user_voices = Voice.query(ancestor=userKey).fetch()
-        # for voice in user_voices:
-        #     print voice.url
+        user_voices = Voice.query(ancestor=userKey).fetch(20)
+        voice_array = []
+        for voice in user_voices:  
+            print voice.url
+            voiceDictionary = {
+                "title" : voice.title,
+                "url" : str(voice.url),
+                "datecreated" : voice.dateCreated,
+                "reach" : voice.reach,
+                "v_id" : voice.v_id,
+                "tag" : voice.tag,
+                "privacy" : voice.privacy
+                }
+            voice_array.append(voiceDictionary)
+
         if userProfile:
             user_info = { "response" : "Sucess",
             "userdata" :  {   "name" : userProfile.name,
@@ -132,13 +166,39 @@ class GetUserInformation(MainHelperClass):
                                 "user_id" : userProfile.user_id,
                                 "picture_url" : userProfile.picture_url
                 },
-            "voices" : {
-                   #implement voice recieving 
-                }
+            "voices" : voice_array
             }
             self.writeJson(user_info)
         else:
             self.writeResponse("Error, user not found")
+
+class GetUserVoices(MainHelperClass):
+    def get(self, user_id):
+        userKey = validateUser(user_id)
+        if userKey:
+            user_voices = Voice.query(ancestor=userKey).fetch(20)
+            voiceArray = []
+            for voice in user_voices:
+                voiceDictionary = {
+                "title" : voice.title,
+                "url" : voice.url,
+                "datecreated" : voice.dateCreated,
+                "reach" : voice.reach,
+                "v_id" : voice.v_id,
+                "tag" : voice.tag,
+                "privacy" : voice.privacy
+                }
+                voiceArray.append(voiceDictionary)
+
+            sucessfulResponse = { "response " : "Sucess",
+                "uservoices" : voiceArray
+            }
+            self.writeJson(sucessfulResponse)
+        else:
+            self.writeResponse("Error, user not found")
+
+
+
 
 
 app = webapp2.WSGIApplication([
@@ -146,5 +206,6 @@ app = webapp2.WSGIApplication([
     ('/upload_voice', VoiceUploadHandler),
     ('/view_voice/([^/]+)?', ViewVoiceHandler),
     ('/newuser', LoginUserHandler),
-    ('/user/(\d{16})', GetUserInformation) # ADD REGEX EXPRESSION TO GET INFO.
+    ('/user/(\d{16})', GetUserInformation),
+    ('/voice/(\d{16})', GetUserVoices)
 ], debug=True)
