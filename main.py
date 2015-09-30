@@ -11,6 +11,7 @@ from google.appengine.ext.webapp import blobstore_handlers
 from google.appengine.ext.webapp.util import run_wsgi_app
 from models import User
 from models import Voice
+from models import Listener
 
 from google.appengine.api import app_identity
 
@@ -198,6 +199,41 @@ class GetUserVoices(MainHelperClass):
             self.writeResponse("Error, user not found")
 
 
+class ListenersHandler(MainHelperClass):
+    def get(self, user_id):
+        userKey = validateUser(user_id)
+        if userKey:
+            user_listeners = Listener.query(Listener.user_id = user_id).fetch(100)
+            listenerArray = []
+            listenerArray.append(listenerDictionary)
+            sucessfulResponse = { "response " : "Sucess",
+            "user_listeners" : listenerArray
+            }
+            self.writeJson(sucessfulResponse)
+        else:
+            self.writeResponse("Error, user not found")
+    
+    def post(self, user_id):
+        userKey = validateUser(user_id)
+        if userKey:
+            requestBody = self.request.body
+            jsonRequest = json.loads(requestBody)
+            listenerid = jsonRequest['listener_id']
+            listenKey = validateUser(listenerid)
+            if listenerKey:
+                listener = Listener()
+                listener.user_id = user_id
+                listener.listener_id = listener_id
+                sucessfulResponse = { "response " : "Sucess"}
+            self.writeJson(sucessfulResponse)
+            else:
+                self.writeResponse("Error, listener not found")
+        else:
+         self.writeResponse("Error, user not found")
+
+
+
+
 
 
 
@@ -207,5 +243,6 @@ app = webapp2.WSGIApplication([
     ('/view_voice/([^/]+)?', ViewVoiceHandler),
     ('/newuser', LoginUserHandler),
     ('/user/(\d{16})', GetUserInformation),
-    ('/voice/(\d{16})', GetUserVoices)
+    ('/voice/(\d{16})', GetUserVoices),
+    ('/listener/(\d{16})')
 ], debug=True)
