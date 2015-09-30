@@ -244,5 +244,5 @@ app = webapp2.WSGIApplication([
     ('/newuser', LoginUserHandler),
     ('/user/(\d{16})', GetUserInformation),
     ('/voice/(\d{16})', GetUserVoices),
-    ('/listener/(\d{16})')
+    ('/listener/(\d{16})'. ListenersHandler)
 ], debug=True)
