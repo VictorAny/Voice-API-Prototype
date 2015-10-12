@@ -111,8 +111,40 @@ class ViewVoiceHandler(blobstore_handlers.BlobstoreDownloadHandler):
         else:
             self.send_blob(photo_key)
 
-class LoginUserHandler(MainHelperClass):
-    def post(self):
+class UserHandler(MainHelperClass):
+    def get(self, user_id):
+        userKey = ndb.Key(User, user_id)
+        userProfile = userKey.get()
+        user_voices = Voice.query(ancestor=userKey).fetch(20)
+        voice_array = []
+        for voice in user_voices:  
+            print voice.url
+            voiceDictionary = {
+                "title" : voice.title,
+                "url" : str(voice.url),
+                "datecreated" : voice.dateCreated,
+                "reach" : voice.reach,
+                "v_id" : voice.v_id,
+                "tag" : voice.tag,
+                "privacy" : voice.privacy
+                }
+            voice_array.append(voiceDictionary)
+
+        if userProfile:
+            user_info = { "response" : "Sucess",
+            "userdata" :  {   "name" : userProfile.name,
+                                "email" : userProfile.email,
+                                "user_id" : userProfile.user_id,
+                                "picture_url" : userProfile.picture_url
+                },
+            "voices" : voice_array  #seperate so voices handler handles that.
+            }
+            self.writeJson(user_info)
+        else:
+            self.writeResponse("Error, user not found")
+
+    def post(self, user_id):
+        print "Woohoo posting"
         requestBody = self.request.body
         jsonRequest = json.loads(requestBody)
         user_id = jsonRequest['id']
@@ -141,39 +173,9 @@ class LoginUserHandler(MainHelperClass):
 #     #might make this integer, and treat it like an enum.
 #     privacy = ndb.StringProperty()
 
-class GetUserInformation(MainHelperClass):
-    def get(self, user_id):
-        userKey = ndb.Key(User, user_id)
-        userProfile = userKey.get()
-        user_voices = Voice.query(ancestor=userKey).fetch(20)
-        voice_array = []
-        for voice in user_voices:  
-            print voice.url
-            voiceDictionary = {
-                "title" : voice.title,
-                "url" : str(voice.url),
-                "datecreated" : voice.dateCreated,
-                "reach" : voice.reach,
-                "v_id" : voice.v_id,
-                "tag" : voice.tag,
-                "privacy" : voice.privacy
-                }
-            voice_array.append(voiceDictionary)
 
-        if userProfile:
-            user_info = { "response" : "Sucess",
-            "userdata" :  {   "name" : userProfile.name,
-                                "email" : userProfile.email,
-                                "user_id" : userProfile.user_id,
-                                "picture_url" : userProfile.picture_url
-                },
-            "voices" : voice_array
-            }
-            self.writeJson(user_info)
-        else:
-            self.writeResponse("Error, user not found")
 
-class GetUserVoices(MainHelperClass):
+class VoicesHandler(MainHelperClass):
     def get(self, user_id):
         userKey = validateUser(user_id)
         if userKey:
@@ -203,7 +205,7 @@ class ListenersHandler(MainHelperClass):
     def get(self, user_id):
         userKey = validateUser(user_id)
         if userKey:
-            user_listeners = Listener.query(Listener.user_id = user_id).fetch(100)
+            user_listeners = Listener.query(Listener.user_id == user_id).fetch(100)
             listenerArray = []
             listenerArray.append(listenerDictionary)
             sucessfulResponse = { "response " : "Sucess",
@@ -225,7 +227,7 @@ class ListenersHandler(MainHelperClass):
                 listener.user_id = user_id
                 listener.listener_id = listener_id
                 sucessfulResponse = { "response " : "Sucess"}
-            self.writeJson(sucessfulResponse)
+                self.writeJson(sucessfulResponse)
             else:
                 self.writeResponse("Error, listener not found")
         else:
@@ -241,8 +243,7 @@ app = webapp2.WSGIApplication([
     ('/upload_form', VoiceUploadFormHandler),
     ('/upload_voice', VoiceUploadHandler),
     ('/view_voice/([^/]+)?', ViewVoiceHandler),
-    ('/newuser', LoginUserHandler),
-    ('/user/(\d{16})', GetUserInformation),
-    ('/voice/(\d{16})', GetUserVoices),
-    ('/listener/(\d{16})'. ListenersHandler)
+    ('/user/(\d{10,18})', UserHandler),
+    ('/voice/(\d{16})', VoicesHandler),
+    ('/listener/(\d{16})', ListenersHandler)
 ], debug=True)

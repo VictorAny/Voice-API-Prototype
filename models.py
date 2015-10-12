@@ -13,13 +13,13 @@ class Voice(ndb.Model):
 	url = ndb.BlobKeyProperty()
 	# dateCreated = ndb.DateTimeProperty()
 	dateCreated = ndb.StringProperty()
-	reach = ndb.IntegerProperty()
+	reach = ndb.IntegerProperty(default=0)
 	v_id = ndb.IntegerProperty()
 	tag = ndb.StringProperty()
 	#might make this integer, and treat it like an enum.
 	privacy = ndb.StringProperty()
 
-class Listeners(ndb.Model):
+class Listener(ndb.Model):
 	user_id = ndb.StringProperty()
 	listener_id = ndb.StringProperty()
 
