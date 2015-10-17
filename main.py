@@ -177,6 +177,7 @@ class UserHandler(MainHelperClass):
 
 class VoicesHandler(MainHelperClass):
     def get(self, user_id):
+        print "Voices Handler"
         userKey = validateUser(user_id)
         if userKey:
             user_voices = Voice.query(ancestor=userKey).fetch(20)
@@ -244,6 +245,6 @@ app = webapp2.WSGIApplication([
     ('/upload_voice', VoiceUploadHandler),
     ('/view_voice/([^/]+)?', ViewVoiceHandler),
     ('/user/(\d{10,18})', UserHandler),
-    ('/voice/(\d{16})', VoicesHandler),
+    ('/voice/(\d{10,18})', VoicesHandler),
     ('/listener/(\d{16})', ListenersHandler)
 ], debug=True)
