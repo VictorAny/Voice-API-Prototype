@@ -17,6 +17,7 @@ from google.appengine.api import app_identity
 
 #-----------------------------------------------------------
 #Helpers
+kFetcherBuffer = 20
 
 class MainHelperClass(webapp2.RequestHandler):
     def writeJson(self, dictionary):
@@ -62,6 +63,31 @@ def validateUser(user_id):
         return userKey
     else:
         return None
+
+def parseVoiceFromVoiceQuery(voiceObjects):
+    voiceArray = []
+    for voice in voiceObjects:
+        voiceDictionary = {
+                "title" : voice.title,
+                "url" : voice.url,
+                "datecreated" : voice.dateCreated,
+                "reach" : voice.reach,
+                "v_id" : voice.v_id,
+                "tag" : voice.tag,
+                "privacy" : voice.privacy
+                }
+        voiceArray.append(voiceDictionary)
+    return voiceArray
+
+def parseListenerVoicesAndInformation(listenerProfile, listenerVocies):
+    listenerVoiceArray = parseVoiceFromVoiceQuery(listenerVocies)
+    listenerDict = { "name" : listenerProfile.name,
+                    "id"    : listenerProfile.id,
+                    "picture_url" : listerProfile.picture_url
+                    "voices" : listenerVoiceArray
+    }
+    return listenerDict
+
 
 #HANDLERS
 #-----------------------------------------------------------
@@ -116,20 +142,7 @@ class UserHandler(MainHelperClass):
         userKey = ndb.Key(User, user_id)
         userProfile = userKey.get()
         user_voices = Voice.query(ancestor=userKey).fetch(20)
-        voice_array = []
-        for voice in user_voices:  
-            print voice.url
-            voiceDictionary = {
-                "title" : voice.title,
-                "url" : str(voice.url),
-                "datecreated" : voice.dateCreated,
-                "reach" : voice.reach,
-                "v_id" : voice.v_id,
-                "tag" : voice.tag,
-                "privacy" : voice.privacy
-                }
-            voice_array.append(voiceDictionary)
-
+        voice_array = parseVoiceFromVoiceQuery(user_voices)
         if userProfile:
             user_info = { "response" : "Sucess",
             "userdata" :  {   "name" : userProfile.name,
@@ -181,19 +194,7 @@ class VoicesHandler(MainHelperClass):
         userKey = validateUser(user_id)
         if userKey:
             user_voices = Voice.query(ancestor=userKey).fetch(20)
-            voiceArray = []
-            for voice in user_voices:
-                voiceDictionary = {
-                "title" : voice.title,
-                "url" : voice.url,
-                "datecreated" : voice.dateCreated,
-                "reach" : voice.reach,
-                "v_id" : voice.v_id,
-                "tag" : voice.tag,
-                "privacy" : voice.privacy
-                }
-                voiceArray.append(voiceDictionary)
-
+            voiceArray = parseVoiceFromVoiceQuery(user_voices)
             sucessfulResponse = { "response " : "Sucess",
                 "uservoices" : voiceArray
             }
@@ -206,9 +207,19 @@ class ListenersHandler(MainHelperClass):
     def get(self, user_id):
         userKey = validateUser(user_id)
         if userKey:
+            print "User key is valid, now attaining listeners"
+            #Figure out better way of doing this, go by posts. Get most recent voices, don't go off listeners..
             user_listeners = Listener.query(Listener.user_id == user_id).fetch(100)
             listenerArray = []
-            listenerArray.append(listenerDictionary)
+            print "Listeners objects acquired, now jsonifying information for transmission"
+            for listener in user_listeners:
+                listenerKey = ndb.Key(User, listener.listener_id)
+                if listenerKey:
+                    listenerProfile = listenerKey.get()
+                    listenerVoices = Voice.query(ancestor=listenerKey).fetch(20)
+                    listenerDictionary = parseListenerVoicesAndInformation(listenerProfile, listenerVoices)
+                    listenerArray.append(listenerDictionary)
+
             sucessfulResponse = { "response " : "Sucess",
             "user_listeners" : listenerArray
             }
