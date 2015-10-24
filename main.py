@@ -81,10 +81,11 @@ def parseVoiceFromVoiceQuery(voiceObjects):
 
 def parseListenerVoicesAndInformation(listenerProfile, listenerVocies):
     listenerVoiceArray = parseVoiceFromVoiceQuery(listenerVocies)
+    sortedArray = sorted(listenerVoiceArray, key=lambda voice: voice.datecreated)
     listenerDict = { "name" : listenerProfile.name,
                     "id"    : listenerProfile.id,
-                    "picture_url" : listerProfile.picture_url
-                    "voices" : listenerVoiceArray
+                    "picture_url" : listerProfile.picture_url,
+                    "voices" : sortedArray
     }
     return listenerDict
 
@@ -105,6 +106,7 @@ class VoiceUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
         print self.request
         metaData = self.request.get('victor')
         mydict = dict((k.strip(), v.strip()) for k,v in (item.split('=') for item in metaData.split('&')))
+        print mydict
         try:
             upload = self.get_uploads()[0]
             print upload.key()
@@ -115,6 +117,7 @@ class VoiceUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
             voice_id = Voice.allocate_ids(size=1, parent=user_key)[0]
             voice_key = ndb.Key(Voice, voice_id, parent=user_key)
             userVoice = Voice()
+            print "Created voice"
             userVoice.title = mydict['title']
             userVoice.url = voice_url
             userVoice.v_id = voice_id
@@ -209,7 +212,7 @@ class ListenersHandler(MainHelperClass):
         if userKey:
             print "User key is valid, now attaining listeners"
             #Figure out better way of doing this, go by posts. Get most recent voices, don't go off listeners..
-            user_listeners = Listener.query(Listener.user_id == user_id).fetch(100)
+            user_listeners = Listener.query(Listener.user_id == user_id).fetch(20)
             listenerArray = []
             print "Listeners objects acquired, now jsonifying information for transmission"
             for listener in user_listeners:
@@ -219,7 +222,7 @@ class ListenersHandler(MainHelperClass):
                     listenerVoices = Voice.query(ancestor=listenerKey).fetch(20)
                     listenerDictionary = parseListenerVoicesAndInformation(listenerProfile, listenerVoices)
                     listenerArray.append(listenerDictionary)
-
+            sortedResponse = sorted(listenerArray, key= lambda listener: listener["voices"][0].datecreated)
             sucessfulResponse = { "response " : "Sucess",
             "user_listeners" : listenerArray
             }
