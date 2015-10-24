@@ -69,7 +69,7 @@ def parseVoiceFromVoiceQuery(voiceObjects):
     for voice in voiceObjects:
         voiceDictionary = {
                 "title" : voice.title,
-                "url" : voice.url,
+                "url" : str(voice.url),
                 "datecreated" : voice.dateCreated,
                 "reach" : voice.reach,
                 "v_id" : voice.v_id,
@@ -142,18 +142,16 @@ class ViewVoiceHandler(blobstore_handlers.BlobstoreDownloadHandler):
 
 class UserHandler(MainHelperClass):
     def get(self, user_id):
+        print "user handler!"
         userKey = ndb.Key(User, user_id)
         userProfile = userKey.get()
-        user_voices = Voice.query(ancestor=userKey).fetch(20)
-        voice_array = parseVoiceFromVoiceQuery(user_voices)
         if userProfile:
             user_info = { "response" : "Sucess",
             "userdata" :  {   "name" : userProfile.name,
                                 "email" : userProfile.email,
                                 "user_id" : userProfile.user_id,
                                 "picture_url" : userProfile.picture_url
-                },
-            "voices" : voice_array  #seperate so voices handler handles that.
+                }
             }
             self.writeJson(user_info)
         else:
@@ -211,7 +209,7 @@ class ListenersHandler(MainHelperClass):
         userKey = validateUser(user_id)
         if userKey:
             print "User key is valid, now attaining listeners"
-            #Figure out better way of doing this, go by posts. Get most recent voices, don't go off listeners..
+            #Figure out better way of doing this, go by posts. Get most recent voices from listeners, don't go off all listeners..
             user_listeners = Listener.query(Listener.user_id == user_id).fetch(20)
             listenerArray = []
             print "Listeners objects acquired, now jsonifying information for transmission"
