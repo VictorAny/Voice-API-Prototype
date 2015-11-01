@@ -43,11 +43,15 @@ def createUserWithUserInformation(jsonRequest):
     u_email = jsonRequest['email']
     u_id = jsonRequest['id']
     u_profile_url = jsonRequest['picture_url']
+    u_username = jsonRequest['username']
+    u_slogan = jsonRequest["slogan"]
     user = User()
     user.name = u_name
     user.user_id = u_id
     user.email = u_email
     user.picture_url = u_profile_url
+    user.username = u_username
+    user.slogan = u_slogan
     userKey = ndb.Key(User, u_id)
     print userKey
     user.key = userKey
@@ -148,9 +152,11 @@ class UserHandler(MainHelperClass):
         if userProfile:
             user_info = { "response" : "Sucess",
             "userdata" :  {   "name" : userProfile.name,
+                            "username" : userProfile.username,
                                 "email" : userProfile.email,
                                 "user_id" : userProfile.user_id,
-                                "picture_url" : userProfile.picture_url
+                                "picture_url" : userProfile.picture_url,
+                                "slogan" : userProfile.slogan
                 }
             }
             self.writeJson(user_info)
@@ -174,21 +180,6 @@ class UserHandler(MainHelperClass):
                 self.writeResponse("Error setting up user")
 
 
-
-# class Voice(ndb.Model):
-#     #parent will be User
-#     title = ndb.StringProperty()
-#     url = ndb.BlobKeyProperty()
-#     # dateCreated = ndb.DateTimeProperty()
-#     dateCreated = ndb.StringProperty()
-#     reach = ndb.IntegerProperty(default=0)
-#     v_id = ndb.IntegerProperty()
-#     tag = ndb.StringProperty()
-#     #might make this integer, and treat it like an enum.
-#     privacy = ndb.StringProperty()
-
-
-
 class VoicesHandler(MainHelperClass):
     def get(self, user_id):
         print "Voices Handler"
@@ -206,6 +197,7 @@ class VoicesHandler(MainHelperClass):
 
 class ListenersHandler(MainHelperClass):
     def get(self, user_id):
+        print "Listener's Handler!"
         userKey = validateUser(user_id)
         if userKey:
             print "User key is valid, now attaining listeners"
@@ -229,22 +221,29 @@ class ListenersHandler(MainHelperClass):
             self.writeResponse("Error, user not found")
     
     def post(self, user_id):
+        print "Listeners Handler!"
         userKey = validateUser(user_id)
         if userKey:
             requestBody = self.request.body
             jsonRequest = json.loads(requestBody)
-            listenerid = jsonRequest['listener_id']
-            listenKey = validateUser(listenerid)
-            if listenerKey:
-                listener = Listener()
-                listener.user_id = user_id
-                listener.listener_id = listener_id
-                sucessfulResponse = { "response " : "Sucess"}
-                self.writeJson(sucessfulResponse)
-            else:
-                self.writeResponse("Error, listener not found")
+            listenerString = jsonRequest['listener_id']
+            listenerArray = listenerString.split(',')
+            print listenerArray
+            for listenerid in listenerArray:
+                if listenerid != "":
+                    print listenerid
+                    listenKey = validateUser(listenerid)
+                    if listenKey:
+                        listener = Listener()
+                        listener.user_id = user_id
+                        listener.listener_id = listenerid
+                        listener.put() 
+                    else:
+                        self.writeResponse("Error, listener not found")    
+            sucessfulResponse = { "response " : "Sucess"}
+            self.writeJson(sucessfulResponse)
         else:
-         self.writeResponse("Error, user not found")
+            self.writeResponse("Error, user not found")
 
 
 
@@ -258,5 +257,5 @@ app = webapp2.WSGIApplication([
     ('/view_voice/([^/]+)?', ViewVoiceHandler),
     ('/user/(\d{10,18})', UserHandler),
     ('/voice/(\d{10,18})', VoicesHandler),
-    ('/listener/(\d{16})', ListenersHandler)
+    ('/listener/(\d{10,18})', ListenersHandler)
 ], debug=True)
