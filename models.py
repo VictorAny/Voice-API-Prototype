@@ -9,7 +9,7 @@ class User(ndb.Model):
 	picture_url = ndb.StringProperty()
 	#max is 15 characters??
 	slogan = ndb.StringProperty()
-	listeners = ndb.KeyProperty(kind ='User', repeated=True)
+	#listeners = ndb.KeyProperty(kind ='User', repeated=True)
 
 class Voice(ndb.Model):
 	#parent will be User
@@ -23,7 +23,7 @@ class Voice(ndb.Model):
 	#might make this integer, and treat it like an enum.
 	privacy = ndb.StringProperty()
 	#holds the user id of the voice creator. To be used solely for easy fetching and comapring. 
-	#userid = ndb.StringProperty()
+	userid = ndb.StringProperty()
 
 class Listener(ndb.Model):
 	user_id = ndb.StringProperty()

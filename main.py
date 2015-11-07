@@ -71,7 +71,13 @@ def validateUser(user_id):
 def parseVoiceFromVoiceQuery(voiceObjects):
     voiceArray = []
     for voice in voiceObjects:
-        voiceDictionary = {
+        voiceDictionary = parseVoiceObject(voice)
+        voiceArray.append(voiceDictionary)
+    return voiceArray
+
+def parseVoiceObject(voice):
+
+    voiceDictionary = {
                 "title" : voice.title,
                 "url" : str(voice.url),
                 "datecreated" : voice.dateCreated,
@@ -80,8 +86,7 @@ def parseVoiceFromVoiceQuery(voiceObjects):
                 "tag" : voice.tag,
                 "privacy" : voice.privacy
                 }
-        voiceArray.append(voiceDictionary)
-    return voiceArray
+    return voiceDictionary
 
 def parseListenerVoicesAndInformation(listenerProfile, listenerVocies):
     listenerVoiceArray = parseVoiceFromVoiceQuery(listenerVocies)
@@ -117,9 +122,9 @@ class VoiceUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
             voice_url = upload.key()
             user_id = mydict['user_id']
             # create unique key for voice_id
-            user_key = ndb.Key(User, user_id)
-            voice_id = Voice.allocate_ids(size=1, parent=user_key)[0]
-            voice_key = ndb.Key(Voice, voice_id, parent=user_key)
+            #user_key = ndb.Key(User, user_id)
+            voice_id = Voice.allocate_ids(size=1)[0]
+            voice_key = ndb.Key(Voice, voice_id)
             userVoice = Voice()
             print "Created voice"
             userVoice.title = mydict['title']
@@ -128,6 +133,7 @@ class VoiceUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
             userVoice.privacy = mydict['privacy']
             userVoice.tag = mydict['tag']
             userVoice.key = voice_key
+            userVoice.userid = user_id
             userVoice.put()
 
             mynewDict = {"blob_view_url" : '/view_voice/%s' % upload.key()}
@@ -185,7 +191,7 @@ class VoicesHandler(MainHelperClass):
         print "Voices Handler"
         userKey = validateUser(user_id)
         if userKey:
-            user_voices = Voice.query(ancestor=userKey).fetch(20)
+            user_voices = Voice.query(Voice.userid == user_id).fetch(20)
             voiceArray = parseVoiceFromVoiceQuery(user_voices)
             sucessfulResponse = { "response " : "Sucess",
                 "uservoices" : voiceArray
@@ -208,6 +214,7 @@ class ListenersHandler(MainHelperClass):
             for listener in user_listeners:
                 listenerKey = ndb.Key(User, listener.listener_id)
                 if listenerKey:
+                    #Change this. We should only return array of listeners, not voices.
                     listenerProfile = listenerKey.get()
                     listenerVoices = Voice.query(ancestor=listenerKey).fetch(20)
                     listenerDictionary = parseListenerVoicesAndInformation(listenerProfile, listenerVoices)
@@ -245,6 +252,37 @@ class ListenersHandler(MainHelperClass):
         else:
             self.writeResponse("Error, user not found")
 
+#NEEDS QA 
+class ListenerVoicesHandler(MainHelperClass):
+    def get(self, user_id):
+        print "ListenerVoices Handler!"
+        userKey = validateUser(user_id)
+        if userKey:
+            listenerVoices = []
+            listenerids = []
+            user_listeners = Listener.query(Listener.user_id == user_id).fetch()
+            for listener in user_listeners:
+                listenerids.append(listener.listener_id)
+            voices = Voice.query(Voice.userid.IN(listenerids)).order(Voice.dateCreated).fetch(20)
+            print voices
+            for voice in voices:
+                userKey = validateUser(voice.userid)
+                if userKey:
+                    userProfile = userKey.get()
+                    voiceDict = parseVoiceObject(voice)
+                    listenerVoiceDict = {"name" : userProfile.name,
+                                        "profile_pic" : userProfile.picture_url,
+                                        "id"   : userProfile.user_id,
+                                        "data" : voiceDict
+                     }
+                    listenerVoices.append(listenerVoiceDict)
+            returnDictionary = {"response" : "Sucess",
+                                "info" : listenerVoices
+                                }
+            self.writeJson(returnDictionary)
+        else:
+            self.writeResponse("Error, finding user")
+
 
 
 
@@ -257,5 +295,6 @@ app = webapp2.WSGIApplication([
     ('/view_voice/([^/]+)?', ViewVoiceHandler),
     ('/user/(\d{10,18})', UserHandler),
     ('/voice/(\d{10,18})', VoicesHandler),
-    ('/listener/(\d{10,18})', ListenersHandler)
+    ('/listener/(\d{10,18})', ListenersHandler),
+    ('/voice/listeners/(\d{10,18})', ListenerVoicesHandler)
 ], debug=True)
