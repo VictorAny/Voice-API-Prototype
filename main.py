@@ -18,6 +18,7 @@ from google.appengine.api import app_identity
 #-----------------------------------------------------------
 #Helpers
 kFetcherBuffer = 20
+kNotApproved = 0
 
 class MainHelperClass(webapp2.RequestHandler):
     def writeJson(self, dictionary):
@@ -233,17 +234,19 @@ class ListenersHandler(MainHelperClass):
         if userKey:
             requestBody = self.request.body
             jsonRequest = json.loads(requestBody)
-            listenerString = jsonRequest['listener_id']
+            listenerString = jsonRequest['user_ids']
             listenerArray = listenerString.split(',')
             print listenerArray
-            for listenerid in listenerArray:
-                if listenerid != "":
-                    print listenerid
-                    listenKey = validateUser(listenerid)
-                    if listenKey:
+            for listeneruserid in listenerArray:
+                if listeneruserid != "":
+                    print listeneruserid
+                    userKey = validateUser(listeneruserid)
+                    if userKey:
                         listener = Listener()
-                        listener.user_id = user_id
-                        listener.listener_id = listenerid
+                        listener.user_id = listeneruserid
+                        ##The user who added the person is the one wanting to listen..Thats what their id is the listenerid
+                        listener.listener_id = user_id 
+                        listener.added = kNotApproved     
                         listener.put() 
                     else:
                         self.writeResponse("Error, listener not found")    
@@ -273,6 +276,7 @@ class ListenerVoicesHandler(MainHelperClass):
                     listenerVoiceDict = {"name" : userProfile.name,
                                         "profile_pic" : userProfile.picture_url,
                                         "id"   : userProfile.user_id,
+                                        "userHandler": userProfile.username,
                                         "data" : voiceDict
                      }
                     listenerVoices.append(listenerVoiceDict)

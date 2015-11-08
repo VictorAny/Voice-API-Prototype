@@ -11,8 +11,7 @@ class User(ndb.Model):
 	slogan = ndb.StringProperty()
 	#listeners = ndb.KeyProperty(kind ='User', repeated=True)
 
-class Voice(ndb.Model):
-	#parent will be User
+class Voice(ndb.Model): 
 	title = ndb.StringProperty()
 	url = ndb.BlobKeyProperty()
 	# dateCreated = ndb.DateTimeProperty()
@@ -25,9 +24,19 @@ class Voice(ndb.Model):
 	#holds the user id of the voice creator. To be used solely for easy fetching and comapring. 
 	userid = ndb.StringProperty()
 
-class Listener(ndb.Model):
+class Listener(ndb.Model):	
+	"""
+	Specifies the user who is being listened to.
+	"""
 	user_id = ndb.StringProperty()
+
+	"""
+	Specifies the user who is listening to the user and is a 'listener'
+	"""
 	listener_id = ndb.StringProperty()
-	#used to see if the user has been added backed. 
-	#added = ndb.IntegerProperty()
+
+	"""
+	Tells us if the listener has been approved by the user.
+	"""
+	added = ndb.IntegerProperty()
 
