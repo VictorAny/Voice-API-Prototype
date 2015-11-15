@@ -15,12 +15,12 @@ class Voice(ndb.Model):
 	title = ndb.StringProperty()
 	url = ndb.BlobKeyProperty()
 	# dateCreated = ndb.DateTimeProperty()
-	dateCreated = ndb.StringProperty()
+	dateCreated = ndb.DateTimeProperty(auto_now_add=True)
 	reach = ndb.IntegerProperty(default=0)
 	v_id = ndb.IntegerProperty()
 	tag = ndb.StringProperty()
 	#might make this integer, and treat it like an enum.
-	privacy = ndb.StringProperty()
+	privacy = ndb.IntegerProperty()
 	#holds the user id of the voice creator. To be used solely for easy fetching and comapring. 
 	userid = ndb.StringProperty()
 

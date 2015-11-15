@@ -12,7 +12,7 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 from models import User
 from models import Voice
 from models import Listener
-
+from datetime import datetime
 from google.appengine.api import app_identity
 
 #-----------------------------------------------------------
@@ -81,11 +81,11 @@ def parseVoiceObject(voice):
     voiceDictionary = {
                 "title" : voice.title,
                 "url" : str(voice.url),
-                "datecreated" : voice.dateCreated,
+                "datecreated" : str(voice.dateCreated),
                 "reach" : voice.reach,
                 "v_id" : voice.v_id,
                 "tag" : voice.tag,
-                "privacy" : voice.privacy
+                "privacy" : str(voice.privacy)
                 }
     return voiceDictionary
 
@@ -131,7 +131,10 @@ class VoiceUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
             userVoice.title = mydict['title']
             userVoice.url = voice_url
             userVoice.v_id = voice_id
-            userVoice.privacy = mydict['privacy']
+            print "Creating time"
+            jsonPrivacy  = mydict['privacy']
+            userVoice.privacy = int(jsonPrivacy)
+            print "Almost there!"
             userVoice.tag = mydict['tag']
             userVoice.key = voice_key
             userVoice.userid = user_id
@@ -266,6 +269,7 @@ class ListenerVoicesHandler(MainHelperClass):
             user_listeners = Listener.query(Listener.user_id == user_id).fetch()
             for listener in user_listeners:
                 listenerids.append(listener.listener_id)
+            listenerids.append(user_id)
             voices = Voice.query(Voice.userid.IN(listenerids)).order(Voice.dateCreated).fetch(20)
             print voices
             for voice in voices:
