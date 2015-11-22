@@ -19,6 +19,7 @@ from google.appengine.api import app_identity
 #Helpers
 kFetcherBuffer = 20
 kNotApproved = 0
+kApproved = 1
 
 class MainHelperClass(webapp2.RequestHandler):
     def writeJson(self, dictionary):
@@ -89,13 +90,11 @@ def parseVoiceObject(voice):
                 }
     return voiceDictionary
 
-def parseListenerVoicesAndInformation(listenerProfile, listenerVocies):
-    listenerVoiceArray = parseVoiceFromVoiceQuery(listenerVocies)
-    sortedArray = sorted(listenerVoiceArray, key=lambda voice: voice.datecreated)
+def parseListenerInformation(listenerProfile):
     listenerDict = { "name" : listenerProfile.name,
-                    "id"    : listenerProfile.id,
-                    "picture_url" : listerProfile.picture_url,
-                    "voices" : sortedArray
+                    "id"    : listenerProfile.user_id,
+                    "picture_url" : listenerProfile.picture_url,
+                    "username" : listenerProfile.username
     }
     return listenerDict
 
@@ -125,13 +124,13 @@ class VoiceUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
             # create unique key for voice_id
             #user_key = ndb.Key(User, user_id)
             voice_id = Voice.allocate_ids(size=1)[0]
+            print voice_id
             voice_key = ndb.Key(Voice, voice_id)
             userVoice = Voice()
             print "Created voice"
             userVoice.title = mydict['title']
             userVoice.url = voice_url
             userVoice.v_id = voice_id
-            print "Creating time"
             jsonPrivacy  = mydict['privacy']
             userVoice.privacy = int(jsonPrivacy)
             print "Almost there!"
@@ -212,18 +211,16 @@ class ListenersHandler(MainHelperClass):
         if userKey:
             print "User key is valid, now attaining listeners"
             #Figure out better way of doing this, go by posts. Get most recent voices from listeners, don't go off all listeners..
-            user_listeners = Listener.query(Listener.user_id == user_id).fetch(20)
+            # Should only return accepted listeners. 
+            user_listeners = Listener.query(Listener.user_id == user_id, Listener.added == kApproved).fetch(20)
             listenerArray = []
             print "Listeners objects acquired, now jsonifying information for transmission"
             for listener in user_listeners:
                 listenerKey = ndb.Key(User, listener.listener_id)
                 if listenerKey:
-                    #Change this. We should only return array of listeners, not voices.
                     listenerProfile = listenerKey.get()
-                    listenerVoices = Voice.query(ancestor=listenerKey).fetch(20)
-                    listenerDictionary = parseListenerVoicesAndInformation(listenerProfile, listenerVoices)
+                    listenerDictionary = parseListenerInformation(listenerProfile)
                     listenerArray.append(listenerDictionary)
-            sortedResponse = sorted(listenerArray, key= lambda listener: listener["voices"][0].datecreated)
             sucessfulResponse = { "response " : "Sucess",
             "user_listeners" : listenerArray
             }
@@ -291,9 +288,55 @@ class ListenerVoicesHandler(MainHelperClass):
         else:
             self.writeResponse("Error, finding user")
 
+class ListenerRequestHandler(MainHelperClass):
+    def get(self, userid):
+        userKey = validateUser(userid)
+        if userKey:
+            print "Finding user listener requests"
+            requestArray =[]
+            userListeners = Listener.query(Listener.user_id == userid, Listener.added == kNotApproved).fetch(100)
+            print "Listeners objects acquired, now jsonifying information for transmission"
+            for listener in userListeners:
+                listenerKey = ndb.Key(User, listener.listener_id)
+                if listenerKey:
+                    listenerProfile = listenerKey.get()
+                    listenerDictionary = parseListenerInformation(listenerProfile)
+                    requestArray.append(listenerDictionary)
+            sucessfulResponse = { "response" : "Sucess",
+                                "user_listeners" : requestArray
+            }
+            self.writeJson(sucessfulResponse)
+        else:
+            self.writeResponse("Error, user not found")
 
 
-
+    def post(self, user_id):
+        userKey = validateUser(user_id)
+        if userKey:
+            requestBody = self.request.body
+            jsonRequest = json.loads(requestBody)
+            # user responds to listener request. Therefore we should be looking for listener_id
+            listenerid = jsonRequest['listener_id']
+            #Made concious decision to handle one listener at a time.
+            response = jsonRequest["response"]
+            listenerKey = validateUser(listenerid)
+            if listenerKey:
+                if response == "Accept":
+                    print listenerid
+                    listenerObj = Listener.query(Listener.listener_id == listenerid)
+                    ##The user who added the person is the one wanting to listen..Thats why their id is the listenerid
+                    ## Maybe check if the list
+                    listenerObj.added = kApproved     
+                    listenerObj.put()
+                if response == "Decline":
+                    listenerObj = Listener.query(Listener.listener_id == listenerid)
+                    listenerObj.delete()
+            else:
+                self.writeResponse("Error, listener not found")    
+            sucessfulResponse = { "response " : "Sucess"}
+            self.writeJson(sucessfulResponse)
+        else:
+            self.writeResponse("Error, user not found")
 
 
 
@@ -304,5 +347,6 @@ app = webapp2.WSGIApplication([
     ('/user/(\d{10,18})', UserHandler),
     ('/voice/(\d{10,18})', VoicesHandler),
     ('/listener/(\d{10,18})', ListenersHandler),
-    ('/voice/listeners/(\d{10,18})', ListenerVoicesHandler)
+    ('/voice/listeners/(\d{10,18})', ListenerVoicesHandler),
+    ('/listener/request/(\d{10,18})', ListenerRequestHandler),
 ], debug=True)

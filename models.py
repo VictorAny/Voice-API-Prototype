@@ -40,3 +40,8 @@ class Listener(ndb.Model):
 	"""
 	added = ndb.IntegerProperty()
 
+class Message(ndb.Model):
+	sender = ndb.StringProperty()
+	reciever = ndb.StringProperty()
+	voice_id = ndb.StringProperty()
+	date = ndb.DateTimeProperty()
