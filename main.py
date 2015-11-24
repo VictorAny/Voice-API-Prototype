@@ -70,6 +70,13 @@ def validateUser(user_id):
     else:
         return None
 
+def validateVoice(voice_id):
+    voice = Voice.get_by_id(voice_id)
+    if voice:
+        return voice_id
+    else:
+        return None
+
 def parseVoiceFromVoiceQuery(voiceObjects):
     voiceArray = []
     for voice in voiceObjects:
@@ -139,7 +146,8 @@ class VoiceUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
             userVoice.userid = user_id
             userVoice.put()
 
-            mynewDict = {"blob_view_url" : '/view_voice/%s' % upload.key()}
+            mynewDict = {"blob_view_url" : '/view_voice/%s' % upload.key(),
+                            "voice_id" : str(voice_id) }
             self.response.out.write(json.dumps(mynewDict))
             # self.redirect('/view_photo/%s' % upload.key())
         except:
@@ -202,6 +210,8 @@ class VoicesHandler(MainHelperClass):
             self.writeJson(sucessfulResponse)
         else:
             self.writeResponse("Error, user not found")
+
+    #handle voice delete through posting. and other stuff.
 
 
 class ListenersHandler(MainHelperClass):
@@ -338,6 +348,86 @@ class ListenerRequestHandler(MainHelperClass):
         else:
             self.writeResponse("Error, user not found")
 
+class MessagesHandler(MainHelperClass):
+    def get(self,user_id):
+        userKey = validateUser(user_id)
+        if userKey:
+            messageArray = []
+            messageQuery = Message.query(Message.sender == user_id).order('-date')
+            # Really in-efficient way of doing this. Searches for each. Use a set to limit repeated querying for the same info?
+            for messageObject in messageQuery:
+                userQuery = User.query(User.id == messageObject.sender)
+                #try timing this?
+                # voiceQuery = Voice.get_by_id(messageQuery.voice_id)
+                voiceQuery = Voice.query(Voice.v_id == messageQuery.voice_id)
+                messageDict = { "sender_username" : userQuery.username,
+                            "id" : userQuery.id,
+                            "voice" : parseVoiceFromVoiceQuery(voiceQuery),
+                            "date" : messageObject.date,
+                            "text" : messageObject.text
+                }
+                messageArray.append(messageDict)
+            returnDictionary = {
+                                "response": "Sucess",
+                                "data" : messageArray
+            }
+            self.writeJson(returnDictionary)
+        else:
+            self.writeResponse("Error, user not found")
+
+    def post(self, user_id):
+        userKey = validateUser(user_id)
+        requestBody = self.request.body
+        jsonRequest = json.loads(requestBody)
+            # user responds to listener request. Therefore we should be looking for listener_id
+        voiceid = jsonRequest["voice_id"]
+        recieverid = jsonRequest["reciever_id"]
+        voiceKey = validateVoice(voiceid)
+        reciever = validateUser(recieverid)
+        if userKey and voiceKey and reciever:
+            message = Message()
+            message.sender = user_id
+            message.reciever = recieverid
+            message.voice_id = voiceid
+            message.text = jsonRequest["text"]
+            message.put()
+            self.writeResponse("Sucess, message recorded")
+        else:
+            self.writeResponse("Error, message not recorded")
+
+#Very basic at the moment, but thats fine honestly. 
+class SearchHandler(MainHelperClass):
+    def get(self, searchTerm):
+        #REALLY SIMPLE. But for now it works
+        voiceQuery = Voice.query(Voice.tag == searchTerm).order('-date').fetch(50)
+        voiceArray = parseVoiceFromVoiceQuery(voiceQuery)
+        responseDictionary = {
+                                "response": "Sucess",
+                                data: voiceArray        
+                                }
+        self.writeJson(responseDictionary)
+
+# expects v_id (being upvoted, and user_id of individual upvoting it.)
+class UpVoteHandler(MainHelperClass):
+    def post(self):
+        requestBody = self.request.body
+        jsonRequest = json.loads(requestBody)
+        upvoter_id = jsonRequest['user_id']
+        upvoterKey = validateUser(upvoter_id)
+        voice_id = jsonRequest['voice_id']
+        voiceKey = validateVoice(voice_id)
+        if upvoterKey and voiceKey:
+            voiceObj = voiceKey.get_by_id(voice_id)
+            voiceObj.rank += 1
+            voiceObj.put()
+            self.writeResponse("Sucess")
+        else:
+            self.writeResponse("Error, something went wrong.")
+
+
+
+
+
 
 
 app = webapp2.WSGIApplication([
@@ -349,4 +439,7 @@ app = webapp2.WSGIApplication([
     ('/listener/(\d{10,18})', ListenersHandler),
     ('/voice/listeners/(\d{10,18})', ListenerVoicesHandler),
     ('/listener/request/(\d{10,18})', ListenerRequestHandler),
+    ('/message/(\d{10,18})', MessagesHandler),
+    ('/search/(\D{0, 15})', SearchHandler),
+    ('/upvote', UpVoteHandler),
 ], debug=True)
