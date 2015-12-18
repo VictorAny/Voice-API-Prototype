@@ -12,5 +12,16 @@ indexes:
 
 - kind: Voice
   properties:
+  - name: tag
+  - name: dateCreated
+
+- kind: Voice
+  properties:
+  - name: tag
+  - name: dateCreated
+    direction: desc
+
+- kind: Voice
+  properties:
   - name: userid
   - name: dateCreated

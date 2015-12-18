@@ -71,7 +71,7 @@ def validateUser(user_id):
         return None
 
 def validateVoice(voice_id):
-    voice = Voice.get_by_id(voice_id)
+    voice = Voice.get_by_id(int(voice_id))
     if voice:
         return voice_id
     else:
@@ -399,11 +399,13 @@ class MessagesHandler(MainHelperClass):
 class SearchHandler(MainHelperClass):
     def get(self, searchTerm):
         #REALLY SIMPLE. But for now it works
-        voiceQuery = Voice.query(Voice.tag == searchTerm).order('-date').fetch(50)
+        print "Search Handler"
+        voiceQuery = Voice.query(Voice.tag == searchTerm).order(-Voice.dateCreated).fetch(50)
         voiceArray = parseVoiceFromVoiceQuery(voiceQuery)
+        # add user information
         responseDictionary = {
                                 "response": "Sucess",
-                                data: voiceArray        
+                                "data": voiceArray        
                                 }
         self.writeJson(responseDictionary)
 
@@ -417,7 +419,7 @@ class UpVoteHandler(MainHelperClass):
         voice_id = jsonRequest['voice_id']
         voiceKey = validateVoice(voice_id)
         if upvoterKey and voiceKey:
-            voiceObj = voiceKey.get_by_id(voice_id)
+            voiceObj = voiceKey.get_by_id(int(voice_id))
             voiceObj.rank += 1
             voiceObj.put()
             self.writeResponse("Sucess")
@@ -425,10 +427,17 @@ class UpVoteHandler(MainHelperClass):
             self.writeResponse("Error, something went wrong.")
 
 
-
-
-
-
+class TestUpVoteHandler(MainHelperClass):
+    def get(self, v_id):
+        voiceid = validateVoice(v_id)
+        print voiceid
+        if voiceid:
+            voiceObj = Voice.get_by_id(int(voiceid))
+            voiceObj.reach += 1
+            voiceObj.put()
+            self.writeResponse("Sucess, rank updated")
+        else:
+            self.writeResponse("Error, voice not found")
 
 app = webapp2.WSGIApplication([
     ('/upload_form', VoiceUploadFormHandler),
@@ -440,6 +449,7 @@ app = webapp2.WSGIApplication([
     ('/voice/listeners/(\d{10,18})', ListenerVoicesHandler),
     ('/listener/request/(\d{10,18})', ListenerRequestHandler),
     ('/message/(\d{10,18})', MessagesHandler),
-    ('/search/(\D{0, 15})', SearchHandler),
+    ('/search/(\D{0,15})', SearchHandler),
     ('/upvote', UpVoteHandler),
+    ('/testupvote/(\d{0,15})', TestUpVoteHandler)
 ], debug=True)

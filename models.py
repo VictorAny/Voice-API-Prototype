@@ -41,7 +41,10 @@ class Listener(ndb.Model):
 	added = ndb.IntegerProperty()
 
 class Message(ndb.Model):
+	''' User id's of the sender and reciever. 
+	''' 
 	sender = ndb.StringProperty()
 	reciever = ndb.StringProperty()
 	voice_id = ndb.StringProperty()
-	date = ndb.DateTimeProperty()
+	text = ndb.StringProperty()
+	date = ndb.DateTimeProperty(auto_now_add=True)
