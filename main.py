@@ -120,7 +120,7 @@ class VoiceUploadFormHandler(MainHelperClass):
 class VoiceUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
     def post(self):
         print self.request
-        metaData = self.request.get('victor')
+        metaData = self.request.get('voice')
         mydict = dict((k.strip(), v.strip()) for k,v in (item.split('=') for item in metaData.split('&')))
         print mydict
         try:
@@ -146,7 +146,8 @@ class VoiceUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
             userVoice.userid = user_id
             userVoice.put()
 
-            mynewDict = {"blob_view_url" : '/view_voice/%s' % upload.key(),
+            mynewDict = { "response": "Sucess", 
+                        "blob_view_url" : '/view_voice/%s' % upload.key(),
                             "voice_id" : str(voice_id) }
             self.response.out.write(json.dumps(mynewDict))
             # self.redirect('/view_photo/%s' % upload.key())
