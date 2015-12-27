@@ -113,7 +113,8 @@ def parseListenerInformation(listenerProfile):
 class VoiceUploadFormHandler(MainHelperClass):
     def get(self):
         upload_url = blobstore.create_upload_url('/upload_voice')
-        myDict = {"blob_url" : upload_url }
+        myDict = {"response": "Sucess",
+                    "blob_url" : upload_url }
         self.response.out.write(json.dumps(myDict))
       
 
@@ -152,7 +153,7 @@ class VoiceUploadHandler(blobstore_handlers.BlobstoreUploadHandler):
             self.response.out.write(json.dumps(mynewDict))
             # self.redirect('/view_photo/%s' % upload.key())
         except:
-            self.response.out.write({"respone" : "Failure"})
+            self.response.out.write({"respone" : "Error, failure"})
         
 
 class ViewVoiceHandler(blobstore_handlers.BlobstoreDownloadHandler):
