@@ -116,7 +116,7 @@ def parseListenerInformation(listenerProfile):
 
 class VoiceUploadFormHandler(MainHelperClass):
     def get(self):
-        upload_url = blobstore.create_upload_url('/upload_voice')
+        upload_url = blobstore.create_upload_url('/upload_voice', gs_bucket_name="/victor-helloworldtest.appspot.com")
         myDict = {"response": "Sucess",
                     "blob_url" : upload_url }
         self.response.out.write(json.dumps(myDict))
