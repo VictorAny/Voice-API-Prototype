@@ -27,8 +27,12 @@ class MainHelperClass(webapp2.RequestHandler):
 
     def writeResponse(self, response):
         responseDictionary = {"response" : response}
-        self.response.out.write(json.dumps(responseDictionary))
+        self.writeJson(responseDictionary)
 
+    def writeSucessfulResponse(self, parameter, response):
+        responseDictionary = {"response": "Sucess",
+                                parameter : response}
+        self.writeJson(responseDictionary)
 
 def create_file(self, filename, bucketName):
 	#write_retry_params = gcs.RetryParams(backoff_factor=1.1)
@@ -169,16 +173,14 @@ class UserHandler(MainHelperClass):
         userKey = ndb.Key(User, user_id)
         userProfile = userKey.get()
         if userProfile:
-            user_info = { "response" : "Sucess",
-            "userdata" :  {   "name" : userProfile.name,
+            userinfo = {   "name" : userProfile.name,
                             "username" : userProfile.username,
                                 "email" : userProfile.email,
                                 "user_id" : userProfile.user_id,
                                 "picture_url" : userProfile.picture_url,
                                 "slogan" : userProfile.slogan
                 }
-            }
-            self.writeJson(user_info)
+            self.writeSucessfulResponse("userdata", userinfo)
         else:
             self.writeResponse("Error, user not found")
 
@@ -206,10 +208,7 @@ class VoicesHandler(MainHelperClass):
         if userKey:
             user_voices = Voice.query(Voice.userid == user_id).fetch(20)
             voiceArray = parseVoiceFromVoiceQuery(user_voices)
-            sucessfulResponse = { "response " : "Sucess",
-                "uservoices" : voiceArray
-            }
-            self.writeJson(sucessfulResponse)
+            self.writeSucessfulResponse("uservoices", voiceArray)
         else:
             self.writeResponse("Error, user not found")
 
@@ -233,10 +232,7 @@ class ListenersHandler(MainHelperClass):
                     listenerProfile = listenerKey.get()
                     listenerDictionary = parseListenerInformation(listenerProfile)
                     listenerArray.append(listenerDictionary)
-            sucessfulResponse = { "response " : "Sucess",
-            "user_listeners" : listenerArray
-            }
-            self.writeJson(sucessfulResponse)
+            self.writeSucessfulResponse("user_listeners", listenerArray)
         else:
             self.writeResponse("Error, user not found")
     
@@ -262,8 +258,7 @@ class ListenersHandler(MainHelperClass):
                         listener.put() 
                     else:
                         self.writeResponse("Error, listener not found")    
-            sucessfulResponse = { "response " : "Sucess"}
-            self.writeJson(sucessfulResponse)
+            self.writeResponse("Sucess, transmission completed.")
         else:
             self.writeResponse("Error, user not found")
 
@@ -293,10 +288,7 @@ class ListenerVoicesHandler(MainHelperClass):
                                         "data" : voiceDict
                      }
                     listenerVoices.append(listenerVoiceDict)
-            returnDictionary = {"response" : "Sucess",
-                                "info" : listenerVoices
-                                }
-            self.writeJson(returnDictionary)
+            self.writeSucessfulResponse("info", listenerVoices)
         else:
             self.writeResponse("Error, finding user")
 
@@ -314,10 +306,7 @@ class ListenerRequestHandler(MainHelperClass):
                     listenerProfile = listenerKey.get()
                     listenerDictionary = parseListenerInformation(listenerProfile)
                     requestArray.append(listenerDictionary)
-            sucessfulResponse = { "response" : "Sucess",
-                                "user_listeners" : requestArray
-            }
-            self.writeJson(sucessfulResponse)
+            self.writeSucessfulResponse("user_listeners", requestArray)
         else:
             self.writeResponse("Error, user not found")
 
@@ -345,8 +334,7 @@ class ListenerRequestHandler(MainHelperClass):
                     listenerObj.delete()
             else:
                 self.writeResponse("Error, listener not found")    
-            sucessfulResponse = { "response " : "Sucess"}
-            self.writeJson(sucessfulResponse)
+            self.writeResponse("Sucess")
         else:
             self.writeResponse("Error, user not found")
 
@@ -369,11 +357,7 @@ class MessagesHandler(MainHelperClass):
                             "text" : messageObject.text
                 }
                 messageArray.append(messageDict)
-            returnDictionary = {
-                                "response": "Sucess",
-                                "data" : messageArray
-            }
-            self.writeJson(returnDictionary)
+            self.writeSucessfulResponse("data", messageArray)
         else:
             self.writeResponse("Error, user not found")
 
@@ -405,11 +389,7 @@ class SearchHandler(MainHelperClass):
         voiceQuery = Voice.query(Voice.tag == searchTerm).order(-Voice.dateCreated).fetch(50)
         voiceArray = parseVoiceFromVoiceQuery(voiceQuery)
         # add user information
-        responseDictionary = {
-                                "response": "Sucess",
-                                "data": voiceArray        
-                                }
-        self.writeJson(responseDictionary)
+        self.writeSucessfulResponse("data", voiceArray)
 
 # expects v_id (being upvoted, and user_id of individual upvoting it.)
 class UpVoteHandler(MainHelperClass):
